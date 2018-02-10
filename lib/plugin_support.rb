@@ -102,11 +102,13 @@ class PluginSupport
     a = a.sort
 
     # plugin_dirs gets wiped out if no modifier is used on a file/folder
-    plugin_dirs = [] if a.map(&:modifier).include?(nil)
+    # and there are no plugins to be loaded by name
+    plugin_dirs = [] if a.map(&:modifier).include?(nil) && b.size.zero?
 
+    load_files = []
     minus_files = [] # make list of files not to load
     a.map do |c|
-      plugin_dirs << c.name if c.modifier.nil? || c.modifier == '+'
+      load_files << c.name if c.modifier.nil? || c.modifier == '+'
       plugin_dirs -= [c.name] if c.modifier == '-' # for Dirs
       minus_files << c.name if c.modifier == '-' # for files
     end
@@ -118,7 +120,7 @@ class PluginSupport
     # pp Plugin.registered_plugins.size
 
     # load files from plugin_dirs unless a file is minused
-    plugin_dirs.each do |d|
+    load_files.each do |d|
       # if a folder, then load all files
       if File.directory?(d)
         (Dir.glob("#{d}/*.rb") - minus_files).each { |x| PluginSupport.load_plugin(x) }
@@ -132,14 +134,20 @@ class PluginSupport
     # puts "after plugin_dirs.each "
     # pp Plugin.registered_plugins.size
 
-    # make list of plugins to run
-    # go through all plugins, remove from list any that match b minus
-    selected_plugin_names = []
+    # save list of selected plugins loaded by .rb path
+    selected_plugin_names = Plugin.registered_plugins.map { |n, _p| n.downcase }
 
-    if b.map(&:modifier).include?(nil)
-      selected_plugin_names = []
-    else
-      selected_plugin_names = Plugin.registered_plugins.map { |n, _p| n.downcase }
+    # load files from plugin_dirs unless a file is minused
+    # pp plugin_dirs
+    plugin_dirs.each do |d|
+      # if a folder, then load all files
+      if File.directory?(d)
+        (Dir.glob("#{d}/*.rb") - minus_files).each { |x| PluginSupport.load_plugin(x) }
+      elsif File.exist?(d)
+        PluginSupport.load_plugin(d)
+      else
+        error("Error: #{d} is not Dir or File")
+      end
     end
 
     b.map do |c|
