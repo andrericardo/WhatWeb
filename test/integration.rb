@@ -228,6 +228,16 @@ class WhatWebTest < Minitest::Test
     assert res
     assert_match %r{WhatWeb - Next generation web scanner.}, res
   end
+
+  def test_plugin_and_path
+    p = IO.popen(['./whatweb',
+      '-p', 'title,plugins/robots.txt.rb',
+      "#{@test_host}/"], 'r+')
+    res = p.read.to_s
+    p.close
+    assert res
+    assert_match %r{WhatWeb - Next generation web scanner.}, res
+  end
   
 # add test for IDN name
 # www.ødegaard.dk
